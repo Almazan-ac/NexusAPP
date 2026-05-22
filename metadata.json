@@ -1,0 +1,6 @@
+{
+  "name": "Nexus Gastro-Bar",
+  "description": "Aplicación gamificada de Nexus Gastro-Bar con reservas con modificadores, inventario, logros e ingredientes votados por la comunidad (Alquimia).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

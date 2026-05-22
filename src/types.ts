@@ -1,0 +1,98 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  cat: 'mains' | 'snacks' | 'drinks' | 'desserts';
+  img: string;
+  desc: string;
+  ingredients: string;
+  xpReward: number; // XP matching the purchase
+}
+
+export interface CartItem {
+  menuItem: MenuItem;
+  quantity: number;
+}
+
+export interface GameModifier {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  reward: string;
+  rules: string;
+  difficulty: 'Fácil' | 'Media' | 'Hardcore';
+  themeColor: string;
+}
+
+export interface Reservation {
+  id: string;
+  gamertag: string;
+  date: string;
+  time: string;
+  dinerCount: number;
+  modifierId: string;
+  qrCodeValue: string;
+  isVerified: boolean;
+  status: 'pending' | 'completed' | 'failed';
+  createdAt: string;
+}
+
+export interface VotingOption {
+  id: string;
+  name: string;
+  category: 'Proteína' | 'Salsa' | 'Topping Extra' | 'Pan Especial';
+  xpAllocated: number;
+  image: string;
+}
+
+export interface VotingSession {
+  id: string;
+  title: string;
+  description: string;
+  endDate: string;
+  options: VotingOption[];
+  hasVoted?: boolean;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xpReward?: number;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  isUsed: boolean;
+  source: string; // e.g. "Desconexión de Red unlocked"
+}
+
+export interface UserProfile {
+  gamertag: string;
+  xp: number;
+  unlockedAchievements: string[];
+  claimedCoupons: Coupon[];
+  votedIngredients: { [ingredientId: string]: number }; // ingredientId: votes_allocated
+}
+
+export interface RestaurantOrder {
+  id: string;
+  gamertag: string;
+  itemId: string;
+  itemName: string;
+  price: number;
+  xpReward: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  createdAt: string;
+}
+
