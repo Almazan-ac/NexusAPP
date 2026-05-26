@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MenuItem, Reservation, RestaurantOrder } from '../types';
-import { INITIAL_MENU_ITEMS, GAME_MODIFIERS } from '../data';
+import { INITIAL_MENU_ITEMS, GAME_MODIFIERS, INITIAL_VOTING_OPTIONS } from '../data';
 import {
   TrendingUp,
   Clock,
@@ -235,9 +235,9 @@ export default function OwnerDashboard({
           </div>
           <div>
             <span className="text-neutral-400 text-[10px] font-mono block">XP ENTREGADA AL CLIENTE</span>
-            <span className="font-orbitron font-extrabold text-lg text-cyber-green">{xpIssued} XP GIMIENDO</span>
+            <span className="font-orbitron font-extrabold text-lg text-cyber-green">{xpIssued} XP</span>
             <span className="text-[10px] text-neutral-500 block font-mono">
-              {totalVotesCount} XP spent in votes
+              {totalVotesCount} Votos registrados en total
             </span>
           </div>
         </div>
@@ -569,7 +569,7 @@ export default function OwnerDashboard({
                   <Sparkles className="w-5 h-5 text-cyber-green" /> ADMINISTRACIÓN DE ENCUESTA DEMOCRÁTICA
                 </h3>
                 <p className="text-neutral-400 text-xs mt-1 font-rajdhani">
-                  Los jugadores de la comunidad gastan la XP que ganan al comprar alimentos para elegir qué ingrediente premium colocar en el menú semanal.
+                  Los jugadores de la comunidad votan por su ingrediente premium favorito de cada categoría (1 voto por cuenta). El ganador se incluye en la hamburguesa especial de la semana.
                 </p>
               </div>
 
@@ -588,14 +588,7 @@ export default function OwnerDashboard({
             <div className="space-y-4">
               <h4 className="font-orbitron text-xs text-neutral-400">DESGLOSE DEL PESO DEL VOTO COMUNITARIO:</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { id: 'v-angus', name: "Carne Premium Angus al Carbón con Mezcal", category: "Proteína" },
-                  { id: 'v-jack', name: "Queso Monterrey Jack Ahumado Flameado", category: "Topping Extra" },
-                  { id: 'v-doritos', name: "Costra de Doritos Spicy Flamin' Hot Crujientes", category: "Topping Extra" },
-                  { id: 'v-mayo-wasabi', name: "Mayonesa Casera de Wasabi Fusion", category: "Salsa" },
-                  { id: 'v-habanero-mango', name: "Salsa Habanero-Mango Silvestre", category: "Salsa" },
-                  { id: 'v-pan-brioche', name: "Pan de Brioche Brioso Glaseado con Mantequilla", category: "Pan Especial" }
-                ].map((option) => {
+                {INITIAL_VOTING_OPTIONS.map((option) => {
                   const votes = globalVotes[option.id] || 0;
                   const pct = totalVotesCount > 0 ? Math.round((votes / totalVotesCount) * 100) : 0;
                   
@@ -611,7 +604,7 @@ export default function OwnerDashboard({
                           </h5>
                         </div>
                         <span className="font-orbitron font-extrabold text-sm text-cyber-green shrink-0">
-                          {votes} XP <span className="text-[10px] text-neutral-500 font-normal">({pct}%)</span>
+                          {votes} {votes === 1 ? 'Voto' : 'Votos'} <span className="text-[10px] text-neutral-500 font-normal">({pct}%)</span>
                         </span>
                       </div>
 

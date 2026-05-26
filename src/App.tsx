@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MenuItem, Reservation, UserProfile, Coupon, RestaurantOrder } from './types';
-import { INITIAL_MENU_ITEMS, GAME_MODIFIERS } from './data';
+import { INITIAL_MENU_ITEMS, GAME_MODIFIERS, INITIAL_VOTING_OPTIONS } from './data';
 
 import MenuCatalog from './components/MenuCatalog';
 import AlchemyNexus from './components/AlchemyNexus';
@@ -23,7 +23,8 @@ import {
   Info,
   ChevronRight,
   ShieldCheck,
-  Check
+  Check,
+  Gift
 } from 'lucide-react';
 
 export default function App() {
@@ -70,12 +71,14 @@ export default function App() {
   const [globalVotes, setGlobalVotes] = useState<{ [key: string]: number }>(() => {
     const saved = localStorage.getItem('nexus_global_votes');
     return saved ? JSON.parse(saved) : {
-      'v-angus': 4320,
-      'v-jack': 3410,
-      'v-doritos': 5890,
-      'v-mayo-wasabi': 2140,
-      'v-habanero-mango': 3820,
-      'v-pan-brioche': 4910
+      'v-angus': 15,
+      'v-camaron': 6,
+      'v-jack': 11,
+      'v-doritos': 18,
+      'v-mayo-wasabi': 8,
+      'v-bbq-miso': 12,
+      'v-brioche-negro': 13,
+      'v-pretzel': 5
     };
   });
 
@@ -165,18 +168,9 @@ export default function App() {
     };
 
     if (userProfile) {
-      let achievements = [...userProfile.unlockedAchievements];
-      
-      // Unlock Recurrent spender if price >= 500
-      if (item.price >= 500 && !achievements.includes('comprador_recurrente')) {
-        achievements.push('comprador_recurrente');
-        alert("🏆 ¡LOGRO DESBLOQUEADO: Ballena del Servidor! Gastas más de $500 MXN en una sola raid.");
-      }
-
       const updatedProfile: UserProfile = {
         ...userProfile,
-        xp: userProfile.xp + item.xpReward,
-        unlockedAchievements: achievements
+        xp: userProfile.xp + item.xpReward
       };
       saveProfile(updatedProfile);
       alert(`🛰️ ¡BOTÍN ADQUIRIDO! Tu pedido de "${item.name}" por $${item.price} MXN ha sido enviado a la cocina del chef. Has ganado +${item.xpReward} XP reales.`);
@@ -203,11 +197,13 @@ export default function App() {
   const handleResetVotes = () => {
     const reset = {
       'v-angus': 0,
+      'v-camaron': 0,
       'v-jack': 0,
       'v-doritos': 0,
       'v-mayo-wasabi': 0,
-      'v-habanero-mango': 0,
-      'v-pan-brioche': 0
+      'v-bbq-miso': 0,
+      'v-brioche-negro': 0,
+      'v-pretzel': 0
     };
     setGlobalVotes(reset);
     localStorage.setItem('nexus_global_votes', JSON.stringify(reset));
@@ -258,21 +254,8 @@ export default function App() {
 
     // If completed & coupon exists, insert to active user profile
     if (status === 'completed' && userProfile) {
-      let achievements = [...userProfile.unlockedAchievements];
       let coupons = [...userProfile.claimedCoupons];
       let currentXp = userProfile.xp;
-
-      // Unlocks achievements depending on modifier completed
-      const actingRes = reservations.find(r => r.id === resId);
-      if (actingRes) {
-        if (actingRes.modifierId === 'desconexion-red' && !achievements.includes('desconexion_total')) {
-          achievements.push('desconexion_total');
-        } else if (actingRes.modifierId === 'trivia-geek' && !achievements.includes('trivia_master')) {
-          achievements.push('trivia_master');
-        } else if (actingRes.modifierId === 'boss-battle' && !achievements.includes('bowser_slayer')) {
-          achievements.push('bowser_slayer');
-        }
-      }
 
       if (unlockedCoupon) {
         coupons.push(unlockedCoupon);
@@ -285,8 +268,7 @@ export default function App() {
       const updatedProfile: UserProfile = {
         ...userProfile,
         xp: currentXp,
-        claimedCoupons: coupons,
-        unlockedAchievements: achievements
+        claimedCoupons: coupons
       };
       saveProfile(updatedProfile);
     }
@@ -319,40 +301,59 @@ export default function App() {
     }
   };
 
-  // Allocate XP on alchemy voting
-  const handleAllocateXpToVote = (optionId: string, xpAmount: number) => {
+  // Toggle vote on alchemy voting (1 vote per category per account, no XP spent)
+  const handleToggleVote = (optionId: string) => {
     if (!userProfile) return;
 
-    const currentAllocated = userProfile.votedIngredients[optionId] || 0;
-    
-    // Add achievement for first alchemy vote
-    let achievements = [...userProfile.unlockedAchievements];
-    if (!achievements.includes('unidos_venceremos')) {
-      achievements.push('unidos_venceremos');
-      alert("🏆 ¡LOGRO DESBLOQUEADO: Primer Voto Alquímico! Tus ideas forjarán el menú de Nexus.");
+    // Find option to know its category
+    const clickedOption = INITIAL_VOTING_OPTIONS.find(o => o.id === optionId);
+    if (!clickedOption) return;
+
+    const category = clickedOption.category;
+    // Find options inside this category
+    const categoryOptionIds = INITIAL_VOTING_OPTIONS
+      .filter(o => o.category === category)
+      .map(o => o.id);
+
+    // See if user already voted for any option in this category
+    let previousVotedId: string | null = null;
+    for (const optId of categoryOptionIds) {
+      if (userProfile.votedIngredients[optId] === 1) {
+        previousVotedId = optId;
+        break;
+      }
     }
 
+    const nextVotedIngredients = { ...userProfile.votedIngredients };
+    const nextGlobalVotes = { ...globalVotes };
+
+    if (previousVotedId === optionId) {
+      // Removing the current vote
+      delete nextVotedIngredients[optionId];
+      nextGlobalVotes[optionId] = Math.max(0, (nextGlobalVotes[optionId] || 1) - 1);
+      alert(`🗳️ Has retirado tu voto para: ${clickedOption.name}`);
+    } else {
+      // If voted something else in this category, subtract that vote first
+      if (previousVotedId) {
+        delete nextVotedIngredients[previousVotedId];
+        nextGlobalVotes[previousVotedId] = Math.max(0, (nextGlobalVotes[previousVotedId] || 1) - 1);
+      }
+
+      // Cast new vote
+      nextVotedIngredients[optionId] = 1;
+      nextGlobalVotes[optionId] = (nextGlobalVotes[optionId] || 0) + 1;
+      alert(`🗳️ ¡Voto de cuenta registrado! Elegiste en ${category}: ${clickedOption.name}`);
+    }
+
+    // Save profile and global votes
     const updatedProfile: UserProfile = {
       ...userProfile,
-      xp: userProfile.xp - xpAmount,
-      votedIngredients: {
-        ...userProfile.votedIngredients,
-        [optionId]: currentAllocated + xpAmount
-      },
-      unlockedAchievements: achievements
+      votedIngredients: nextVotedIngredients
     };
-
     saveProfile(updatedProfile);
 
-    // Also update global votes state
-    setGlobalVotes(prev => {
-      const next = {
-        ...prev,
-        [optionId]: (prev[optionId] || 0) + xpAmount
-      };
-      localStorage.setItem('nexus_global_votes', JSON.stringify(next));
-      return next;
-    });
+    setGlobalVotes(nextGlobalVotes);
+    localStorage.setItem('nexus_global_votes', JSON.stringify(nextGlobalVotes));
   };
 
   // Navigate to profile for quick registration
@@ -539,7 +540,7 @@ export default function App() {
           {currentPage === 'alchemy' && (
             <AlchemyNexus
               userProfile={userProfile}
-              onAllocateXp={handleAllocateXpToVote}
+              onVoteIngredient={handleToggleVote}
               onRequestRegister={handleRequestRegister}
               globalVotes={globalVotes}
             />
@@ -697,8 +698,8 @@ export default function App() {
               currentPage === 'achievements' ? 'text-cyber-cyan' : 'text-neutral-500 hover:text-neutral-300'
             }`}
           >
-            <Award className={`w-5 h-5 ${currentPage === 'achievements' ? 'text-cyber-cyan' : 'text-cyber-magenta'}`} />
-            <span>LOGROS</span>
+            <Gift className={`w-5 h-5 ${currentPage === 'achievements' ? 'text-cyber-cyan' : 'text-cyber-magenta'}`} />
+            <span>CUPONES</span>
           </button>
 
           <button
