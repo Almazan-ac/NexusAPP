@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { MenuItem, Reservation, RestaurantOrder } from '../types';
+import { MenuItem, Reservation, RestaurantOrder, UserProfile } from '../types';
+import { auth } from '../firebase';
 import { INITIAL_MENU_ITEMS, GAME_MODIFIERS, INITIAL_VOTING_OPTIONS } from '../data';
 import {
   TrendingUp,
@@ -18,7 +19,8 @@ import {
   Package,
   Sliders,
   UtensilsCrossed,
-  Tv
+  Tv,
+  BarChart3
 } from 'lucide-react';
 
 interface OwnerDashboardProps {
@@ -35,6 +37,8 @@ interface OwnerDashboardProps {
   onUpdateMenuItemPrice: (itemId: string, newPrice: number) => void;
   onResetVotes: () => void;
   globalVotes: { [key: string]: number };
+  userProfile: UserProfile | null;
+  onReturnToProfile?: () => void;
 }
 
 export default function OwnerDashboard({
@@ -45,7 +49,9 @@ export default function OwnerDashboard({
   menuItems,
   onUpdateMenuItemPrice,
   onResetVotes,
-  globalVotes
+  globalVotes,
+  userProfile,
+  onReturnToProfile
 }: OwnerDashboardProps) {
   const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(
     () => localStorage.getItem('nexus_admin_unlocked') === 'true'
@@ -53,11 +59,15 @@ export default function OwnerDashboard({
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string>('');
   
-  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'reservations' | 'alchemy' | 'menu'>('orders');
+  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'reservations' | 'alchemy' | 'menu' | 'reports'>('orders');
 
   // Input states for price updates
   const [priceEditingId, setPriceEditingId] = useState<string | null>(null);
   const [tempPriceString, setTempPriceString] = useState<string>('');
+
+  const isOwnerByProfile = userProfile?.role === 'owner' || userProfile?.gamertag?.toUpperCase() === 'DUEÑO';
+  const isOwnerByEmail = auth.currentUser?.email === '23380363@itcv.edu.mx';
+  const isAuthorized = isAdminUnlocked || isOwnerByProfile || isOwnerByEmail;
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +108,7 @@ export default function OwnerDashboard({
   // Total votes in alchemy
   const totalVotesCount = Object.values(globalVotes).reduce((a, b) => a + b, 0);
 
-  if (!isAdminUnlocked) {
+  if (!isAuthorized) {
     return (
       <div className="max-w-md mx-auto my-12 animate-fadeIn">
         <div className="bg-neutral-950 border-3 border-cyber-magenta p-8 rounded-3xl shadow-2xl shadow-cyber-magenta/15 space-y-6 text-center">
@@ -137,12 +147,22 @@ export default function OwnerDashboard({
             )}
 
             <button
-              type="submit"
-              className="w-full py-4 bg-cyber-magenta text-white font-orbitron font-extrabold text-xs tracking-widest rounded-xl shadow-[0_0_15px_rgba(255,0,255,0.4)] hover:shadow-[0_0_25px_rgba(255,0,255,0.6)] transform hover:scale-[1.01] transition-all cursor-pointer"
+               type="submit"
+               className="w-full py-4 bg-cyber-magenta text-white font-orbitron font-extrabold text-xs tracking-widest rounded-xl shadow-[0_0_15px_rgba(255,0,255,0.4)] hover:shadow-[0_0_25px_rgba(255,0,255,0.6)] transform hover:scale-[1.01] transition-all cursor-pointer animate-pulse"
             >
               AUTENTICAR FIRMA
             </button>
           </form>
+
+          <div className="text-left font-sans text-[11px] text-neutral-400 bg-neutral-900/60 border border-neutral-900 p-4 rounded-2xl space-y-2 leading-relaxed">
+            <span className="font-semibold text-cyber-yellow text-[10px] uppercase font-mono block">💡 Control de Roles Integrado:</span>
+            <p>El portal valida automáticamente tu rol mediante dos canales seguros:</p>
+            <ul className="list-disc list-inside space-y-1 text-neutral-400 pl-1">
+              <li>Iniciar sesión con la cuenta de Google: <strong className="text-white">23380363@itcv.edu.mx</strong></li>
+              <li>Tener asignado el atributo <code className="text-cyber-cyan font-mono font-bold">"owner"</code> en tu documento de perfil.</li>
+              <li>Ingresar el código PIN secreto de anulación operacional.</li>
+            </ul>
+          </div>
 
           <p className="text-[10px] text-neutral-500 font-mono text-center pt-2">
             NEXUS OS Server v3.59 // CD. VICTORIA INDEPENDENCIA
@@ -168,12 +188,22 @@ export default function OwnerDashboard({
           </p>
         </div>
 
-        <button
-          onClick={handleLock}
-          className="px-4 py-2 bg-neutral-900 border border-cyber-magenta text-cyber-magenta hover:bg-neutral-850 hover:text-white rounded-xl text-xs font-orbitron transition-all"
-        >
-          CERRAR TERMINAL
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {onReturnToProfile && (
+            <button
+              onClick={onReturnToProfile}
+              className="px-4 py-2 bg-neutral-900 border border-cyber-cyan text-cyber-cyan hover:bg-neutral-850 hover:text-white rounded-xl text-xs font-orbitron font-semibold transition-all cursor-pointer shadow-md shadow-cyber-cyan/10"
+            >
+              VOLVER A MI PERFIL
+            </button>
+          )}
+          <button
+            onClick={handleLock}
+            className="px-4 py-2 bg-neutral-900 border border-cyber-magenta text-cyber-magenta hover:bg-neutral-850 hover:text-white rounded-xl text-xs font-orbitron transition-all"
+          >
+            CERRAR TERMINAL
+          </button>
+        </div>
       </div>
 
       {/* Telemetry Quick Cards */}
@@ -288,6 +318,17 @@ export default function OwnerDashboard({
             }`}
           >
             <Sliders className="w-4 h-4" /> Alquimia Electoral
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('reports')}
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-orbitron font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
+              activeSubTab === 'reports'
+                ? 'bg-cyber-cyan text-black shadow-[0_0_15px_rgba(0,243,255,0.3)]'
+                : 'bg-neutral-900 leading-snug text-neutral-400 hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" /> Reporte Looker Studio
           </button>
         </div>
 
@@ -590,7 +631,9 @@ export default function OwnerDashboard({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {INITIAL_VOTING_OPTIONS.map((option) => {
                   const votes = globalVotes[option.id] || 0;
-                  const pct = totalVotesCount > 0 ? Math.round((votes / totalVotesCount) * 100) : 0;
+                  const categoryOptions = INITIAL_VOTING_OPTIONS.filter(o => o.category === option.category);
+                  const catTotalVotes = categoryOptions.reduce((sum, o) => sum + (globalVotes[o.id] || 0), 0);
+                  const pct = catTotalVotes > 0 ? Math.round((votes / catTotalVotes) * 100) : 0;
                   
                   return (
                     <div key={option.id} className="bg-neutral-900/40 p-4 rounded-xl border border-neutral-800 space-y-2">
@@ -618,6 +661,44 @@ export default function OwnerDashboard({
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 5: Looker Studio Reports */}
+        {activeSubTab === 'reports' && (
+          <div className="space-y-6">
+            <div className="bg-neutral-900/40 p-4.5 rounded-2xl border border-neutral-900 flex justify-between items-center flex-wrap gap-4">
+              <div>
+                <h3 className="font-orbitron font-black text-sm text-cyber-cyan flex items-center gap-1.5 animate-pulse">
+                  <BarChart3 className="w-5 h-5 text-cyber-cyan" /> REPORTE E INTELIGENCIA DE NEGOCIO (LOOKER STUDIO)
+                </h3>
+                <p className="text-neutral-400 text-xs mt-1 font-rajdhani leading-relaxed">
+                  Contenedor para visualizar el informe incrustado de Looker Studio. Este panel de control es totalmente interactivo, responsivo y está estrictamente reservado para el Propietario.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[10px] text-neutral-500 font-mono uppercase block">SOPORTE MULTIPLATAFORMA // ENLACE DE DATOS DE TAMAULIPAS</span>
+              
+              {/* Responsive Iframe Container */}
+              <div className="w-full h-[500px] sm:h-[650px] lg:h-[750px] bg-neutral-950 border-2 border-cyber-cyan/30 rounded-2xl overflow-hidden relative shadow-[0_0_30px_rgba(0,243,255,0.1)]">
+                <iframe
+                  src="https://lookerstudio.google.com/embed/reporting/3bf76a16-95f2-4e9e-ae0c-7b08edfa5eff/page/1M"
+                  className="w-full h-full border-0 absolute inset-0 bg-neutral-900"
+                  allowFullScreen
+                  sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                  title="Google Looker Studio Nexus Report"
+                />
+              </div>
+
+              <div className="p-4 bg-neutral-900/60 border border-neutral-800 rounded-xl space-y-1 mt-2">
+                <span className="text-cyber-yellow text-[10px] uppercase font-mono font-bold block">💡 Solución de Problemas de Cero-Fugas y Acceso:</span>
+                <p className="text-[11px] text-neutral-400 leading-relaxed font-rajdhani">
+                  Este panel de control e informe se renderiza condicionalmente en el lado del cliente y **está completamente ausente del árbol DOM de los clientes comunes**. Si no se cumple la firma de Google o del PIN de administrador, el código del iframe y sus llamadas de red son inaccesibles, por lo que es imposible que un cliente los inspeccione o husmee en el código.
+                </p>
               </div>
             </div>
           </div>

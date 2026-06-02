@@ -1,6 +1,6 @@
 {
   "name": "Nexus Gastro-Bar",
-  "description": "Aplicación gamificada de Nexus Gastro-Bar con reservas con modificadores, inventario, logros e ingredientes votados por la comunidad (Alquimia).",
+  "description": "Portal interactivo y plataforma de incubación gastronómica para mercadólogos y emprendedores de 22 a 35 años. Permite crear páginas profesionales de restaurantes, gestionar valoraciones de clientes, chatear directo con desarrolladores y explorar proyectos terminados como el showcase interactivo de Nexus Gastro-Bar.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

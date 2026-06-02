@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Base primitives and session validation
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\:]+$');
+    }
+
+    // Entity validator definitions
+    function isValidUser(data) {
+      return data.gamertag is string && data.gamertag.size() <= 64
+        && data.xp is int
+        && data.votedIngredients is map;
+    }
+
+    function isValidOrder(data) {
+      return data.id is string && data.id.size() <= 64
+        && data.gamertag is string && data.gamertag.size() <= 64
+        && data.itemId is string && data.itemId.size() <= 64
+        && data.itemName is string && data.itemName.size() <= 128
+        && data.price is number
+        && data.xpReward is number
+        && data.status is string
+        && data.createdAt is string;
+    }
+
+    function isValidReservation(data) {
+      return data.id is string && data.id.size() <= 64
+        && data.gamertag is string && data.gamertag.size() <= 64
+        && data.date is string && data.date.size() <= 32
+        && data.time is string && data.time.size() <= 32
+        && data.dinerCount is number
+        && data.modifierId is string && data.modifierId.size() <= 64
+        && data.qrCodeValue is string
+        && data.isVerified is bool
+        && data.status is string
+        && data.createdAt is string;
+    }
+
+    function isValidMenuItem(data) {
+      return data.id is string && data.id.size() <= 64
+        && data.name is string && data.name.size() <= 128
+        && data.price is number
+        && data.cat is string
+        && data.img is string
+        && data.desc is string
+        && data.ingredients is string
+        && data.xpReward is number;
+    }
+
+    function isValidGlobalVote(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.votes is number;
+    }
+
+    // Secure collections with schemas
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isValidUser(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /orders/{orderId} {
+      allow read, delete: if true;
+      allow create, update: if isValidOrder(request.resource.data);
+    }
+
+    match /reservations/{reservationId} {
+      allow read, delete: if true;
+      allow create, update: if isValidReservation(request.resource.data);
+    }
+
+    match /menuItems/{menuItemId} {
+      allow read: if true;
+      allow write: if isValidMenuItem(request.resource.data);
+    }
+
+    match /votes/{voteId} {
+      allow read: if true;
+      allow write: if isValidGlobalVote(request.resource.data);
+    }
+
+    match /restaurants/{restaurantId} {
+      allow read, write: if true;
+    }
+
+    match /reviews/{reviewId} {
+      allow read, write: if true;
+    }
+
+    match /developerMessages/{messageId} {
+      allow read, write: if true;
+    }
+  }
+}

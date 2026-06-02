@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "coupon": {
+      "title": "Coupon",
+      "description": "A claimable reward coupon unlocked via gamer tasks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "isUsed": { "type": "boolean" },
+        "source": { "type": "string" }
+      },
+      "required": ["id", "code", "title", "description", "isUsed", "source"]
+    },
+    "user": {
+      "title": "UserProfile",
+      "description": "User profile with experience points and claimed rewards",
+      "type": "object",
+      "properties": {
+        "gamertag": { "type": "string" },
+        "xp": { "type": "integer" },
+        "unlockedAchievements": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "claimedCoupons": {
+          "type": "array",
+          "items": { "$ref": "#/entities/coupon" }
+        },
+        "votedIngredients": {
+          "type": "object",
+          "description": "Map of voted ingredient ID to weight (1 or 0)"
+        }
+      },
+      "required": ["gamertag", "xp", "votedIngredients"]
+    },
+    "order": {
+      "title": "RestaurantOrder",
+      "description": "A food order submitted from a table",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "gamertag": { "type": "string" },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "price": { "type": "number" },
+        "xpReward": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "gamertag", "itemId", "itemName", "price", "xpReward", "status", "createdAt"]
+    },
+    "reservation": {
+      "title": "Reservation",
+      "description": "Table reservation with multiplayer game challenge modifier",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "gamertag": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "dinerCount": { "type": "number" },
+        "modifierId": { "type": "string" },
+        "qrCodeValue": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "gamertag", "date", "time", "dinerCount", "modifierId", "qrCodeValue", "isVerified", "status", "createdAt"]
+    },
+    "menuItem": {
+      "title": "MenuItem",
+      "description": "Menu catalog details editable by the restaurant owner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "cat": { "type": "string", "enum": ["mains", "snacks", "drinks", "desserts"] },
+        "img": { "type": "string" },
+        "desc": { "type": "string" },
+        "ingredients": { "type": "string" },
+        "xpReward": { "type": "number" }
+      },
+      "required": ["id", "name", "price", "cat", "img", "desc", "ingredients", "xpReward"]
+    },
+    "globalVote": {
+      "title": "GlobalVote",
+      "description": "Historical accumulated community votes per ingredient ID",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "votes": { "type": "number" }
+      },
+      "required": ["id", "votes"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "Secure user profile tracking gamertag and voter cards"
+    },
+    "/orders/{orderId}": {
+      "schema": "order",
+      "description": "Individual food and magic potion orders"
+    },
+    "/reservations/{reservationId}": {
+      "schema": "reservation",
+      "description": "Table raid reservations and live states"
+    },
+    "/menuItems/{menuItemId}": {
+      "schema": "menuItem",
+      "description": "Catalog of actual foods, editable in real-time"
+    },
+    "/votes/{voteId}": {
+      "schema": "globalVote",
+      "description": "Aggregated voting counts from all accounts"
+    }
+  }
+}

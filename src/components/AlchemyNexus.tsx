@@ -50,9 +50,17 @@ export default function AlchemyNexus({
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Header Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-neutral-950 to-neutral-900 border-2 border-cyber-magenta/30 rounded-2xl p-6 shadow-md shadow-cyber-magenta/10">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-cyber-magenta/10 blur-xl rounded-full"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="relative overflow-hidden border-2 border-cyber-magenta/30 rounded-2xl p-6 shadow-xl shadow-cyber-magenta/10 flex items-center">
+        {/* Background Image representing Alchemy / Cocktail craft */}
+        <img 
+          src="https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?q=80&w=1200" 
+          alt="Alquimia de Sabores" 
+          className="absolute inset-0 w-full h-full object-cover opacity-20"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/90 to-black/30"></div>
+        
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
           <div className="space-y-2">
             <span className="font-press-start text-[9px] text-cyber-yellow animate-pulse bg-cyber-yellow/10 px-2 py-1 rounded">VOTACIÓN DEMOCRÁTICA</span>
             <h2 className="font-orbitron font-black text-2xl text-shadow text-white">LA ALQUIMIA DE NEXUS</h2>
@@ -99,7 +107,7 @@ export default function AlchemyNexus({
           <div className="space-y-8">
             {categories.map((cat) => {
               const catOptions = updatedOptions.filter(o => o.category === cat);
-              const maxCatVotes = Math.max(...catOptions.map(o => o.xpAllocated), 1);
+              const catTotalVotes = catOptions.reduce((sum, o) => sum + o.xpAllocated, 0);
               const categoryWinner = getWinnerForCategory(cat);
               const userVotedInThisCat = getVotedItemForCategory(cat);
 
@@ -117,8 +125,8 @@ export default function AlchemyNexus({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {catOptions.map((opt) => {
                       const isVotedByMe = userProfile?.votedIngredients[opt.id] === 1;
-                      // Percentage of votes relative to the leader of this category
-                      const percentage = Math.round((opt.xpAllocated / maxCatVotes) * 100);
+                      // Percentage of votes relative to the total category votes
+                      const percentage = catTotalVotes > 0 ? Math.round((opt.xpAllocated / catTotalVotes) * 100) : 0;
 
                       return (
                         <div
@@ -200,6 +208,91 @@ export default function AlchemyNexus({
             <p className="text-xs font-sans text-neutral-400 leading-relaxed">
               La hamburguesa secreta semanal de Cd. Victoria se forja combinando la opción más votada de cada categoría:
             </p>
+
+            {/* STACKED INTERACTIVE BURGER SIMULATOR */}
+            <div className="py-5 flex flex-col items-center justify-center space-y-2 relative bg-neutral-900/60 rounded-2xl border border-neutral-850 p-4 overflow-hidden shadow-inner min-h-[220px]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-cyber-magenta/10 to-transparent pointer-events-none"></div>
+              <span className="text-[9px] font-mono text-cyber-magenta uppercase tracking-widest absolute top-2 left-3">🛠️ Simulador de Ensamble de Alquimia</span>
+              
+              {/* Top Bun */}
+              <div className="w-40 relative group transition-all duration-300 hover:scale-105">
+                <div className={`h-10 rounded-t-full flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-widest shadow-lg ${
+                  getVotedItemForCategory('Pan Especial')?.id === 'v-brioche-negro' 
+                    ? 'bg-neutral-900 border-2 border-cyber-magenta shadow-[0_0_15px_rgba(255,0,255,0.4)] text-white' 
+                    : getVotedItemForCategory('Pan Especial')?.id === 'v-pretzel'
+                    ? 'bg-amber-900 border-2 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.4)] text-orange-100'
+                    : 'bg-neutral-850 border border-neutral-800 text-neutral-500'
+                }`}>
+                  {getVotedItemForCategory('Pan Especial') ? (
+                    <span className="flex items-center gap-1">🥯 {getVotedItemForCategory('Pan Especial')?.name.split(' ')[0]}</span>
+                  ) : (
+                    <span>👑 Súper Pan Superior</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Sauce */}
+              <div className="w-36 transition-all duration-300 hover:scale-105">
+                <div className={`h-4 rounded-full flex items-center justify-center text-[8px] font-mono uppercase font-black ${
+                  getVotedItemForCategory('Salsa')?.id === 'v-mayo-wasabi'
+                    ? 'bg-emerald-600/50 border border-emerald-400 text-emerald-200 animate-pulse'
+                    : getVotedItemForCategory('Salsa')?.id === 'v-bbq-miso'
+                    ? 'bg-amber-800/50 border border-amber-600 text-amber-200 animate-pulse'
+                    : 'bg-neutral-850 border border-dashed border-neutral-800 text-neutral-650'
+                }`}>
+                  {getVotedItemForCategory('Salsa') ? (
+                    <span>💦 {getVotedItemForCategory('Salsa')?.name.split(' ')[0]}</span>
+                  ) : (
+                    <span>Aderezo Secreto</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Topping */}
+              <div className="w-36 transition-all duration-300 hover:scale-105">
+                <div className={`h-6 rounded-md flex items-center justify-center text-[9px] font-bold uppercase tracking-wider ${
+                  getVotedItemForCategory('Topping Extra')?.id === 'v-doritos'
+                    ? 'bg-red-750 text-white border-2 border-pink-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
+                    : getVotedItemForCategory('Topping Extra')?.id === 'v-jack'
+                    ? 'bg-amber-500/80 text-neutral-950 border-2 border-amber-350 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                    : 'bg-neutral-850 border border-dashed border-neutral-800 text-neutral-600'
+                }`}>
+                  {getVotedItemForCategory('Topping Extra') ? (
+                    <span className="flex items-center gap-1">🧀 {getVotedItemForCategory('Topping Extra')?.name.split(' ')[0]}</span>
+                  ) : (
+                    <span>Queso Fundente / Topping</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Protein */}
+              <div className="w-40 transition-all duration-300 hover:scale-105">
+                <div className={`h-9 rounded-lg flex items-center justify-center text-[10px] font-black uppercase tracking-widest ${
+                  getVotedItemForCategory('Proteína')?.id === 'v-angus'
+                    ? 'bg-amber-955 border-2 border-amber-600 text-amber-100 shadow-[0_0_12px_rgba(180,83,9,0.3)]'
+                    : getVotedItemForCategory('Proteína')?.id === 'v-camaron'
+                    ? 'bg-orange-700/80 border-2 border-orange-400 text-white shadow-[0_0_12px_rgba(249,115,22,0.3)]'
+                    : 'bg-neutral-850 border border-dashed border-neutral-800 text-neutral-600'
+                }`}>
+                  {getVotedItemForCategory('Proteína') ? (
+                    <span className="flex items-center gap-1">🍖 {getVotedItemForCategory('Proteína')?.name.split(' ')[0]}</span>
+                  ) : (
+                    <span>Proteína Nuclear</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom Bun */}
+              <div className="w-38 transition-all duration-300 hover:scale-105">
+                <div className={`h-6 rounded-b-xl flex items-center justify-center text-[9px] font-bold text-neutral-400 uppercase tracking-wider ${
+                  getVotedItemForCategory('Pan Especial') 
+                    ? 'bg-amber-950/80 border border-amber-800 text-amber-200' 
+                    : 'bg-neutral-850 border border-dashed border-neutral-800 text-neutral-650'
+                }`}>
+                  <span>🥯 Base del Pan</span>
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-3.5 pt-2">
               {categories.map((cat) => {

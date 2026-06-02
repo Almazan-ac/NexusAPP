@@ -30,6 +30,9 @@ export default function ReservationsGamer({
   const [simulatingResId, setSimulatingResId] = useState<string | null>(null);
   const [triviaAnswers, setTriviaAnswers] = useState<{[key: number]: number}>({});
   const [triviaResult, setTriviaResult] = useState<'success' | 'failed' | null>(null);
+  
+  // Custom non-blocking notify state
+  const [notify, setNotify] = useState<{message: string, type: 'success' | 'warn' | null}>({ message: '', type: null });
 
   // Active modifier calculation
   const selectedModifier = GAME_MODIFIERS.find(m => m.id === selectedModId) || GAME_MODIFIERS[0];
@@ -39,7 +42,10 @@ export default function ReservationsGamer({
     const activeNick = userProfile?.gamertag || customGamertag;
 
     if (!activeNick || activeNick.trim() === '') {
-      alert("⚠️ Gamertag requerido. Regístrate en PERFIL o escribe tu Gamertag en el formulario.");
+      setNotify({
+        message: "⚠️ Gamertag requerido. Regístrate en PERFIL o escribe tu Gamertag en el formulario.",
+        type: 'warn'
+      });
       return;
     }
 
@@ -57,7 +63,10 @@ export default function ReservationsGamer({
     };
 
     onAddReservation(newRes);
-    alert("🌌 ¡RESERVA CON MODIFICADOR SINDICADA! Puedes ver tu ticket abajo.");
+    setNotify({
+      message: "🌌 ¡RESERVA CON MODIFICADOR SINDICADA! Puedes ver tu ticket abajo.",
+      type: 'success'
+    });
   };
 
   // Mock trivia questions
@@ -134,15 +143,48 @@ export default function ReservationsGamer({
 
     onUpdateReservation(resId, 'completed', coupon, xpReward);
     setSimulatingResId(null);
-    alert("🏆 ¡MECÁNICA VALIDADA! Recompensa reclamada en LOGROS / PERFIL.");
+    setNotify({
+      message: "🏆 ¡MECÁNICA VALIDADA! Recompensa reclamada en LOGROS / PERFILES.",
+      type: 'success'
+    });
   };
 
   return (
     <div className="space-y-8">
+      {/* GLOWING NOTIFICATION BANNER */}
+      {notify.type && (
+        <div className={`p-4 rounded-xl border flex justify-between items-center animate-slideIn ${
+          notify.type === 'success' 
+            ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+            : 'bg-rose-950/40 border-rose-500/40 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.1)]'
+        }`}>
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <span>{notify.type === 'success' ? '🏆 SYSTEM OK:' : '🚨 SYSTEM WARNING:'}</span>
+            <span>{notify.message}</span>
+          </div>
+          <button 
+            onClick={() => setNotify({ message: '', type: null })}
+            className="px-2 py-1 bg-black/40 border border-neutral-800 rounded hover:border-neutral-600 text-slate-300 cursor-pointer text-[10px]"
+          >
+            CONFIRMAR ✕
+          </button>
+        </div>
+      )}
       
       {/* Dynamic Selector of modifiers */}
-      <div className="bg-neutral-950 border border-cyber-cyan/30 p-6 rounded-2xl shadow-lg">
-        <h3 className="font-orbitron font-extrabold text-lg text-cyber-cyan mb-4 flex items-center gap-2">
+      <div className="relative overflow-hidden bg-neutral-950 border border-cyber-cyan/30 p-6 rounded-2xl shadow-lg">
+        {/* Background Esports Lounge banner */}
+        <div className="absolute inset-0 w-full h-[140px] overflow-hidden">
+          <img 
+            src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200" 
+            alt="Esports Arena" 
+            className="w-full h-full object-cover opacity-15"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 to-transparent"></div>
+        </div>
+        
+        <h3 className="relative z-10 font-orbitron font-extrabold text-lg text-cyber-cyan mb-4 pt-4 flex items-center gap-2">
           <Gamepad2 className="w-5 h-5 text-cyber-cyan text-shadow" /> REGISTRAR NUEVA RAID (RESERVAS)
         </h3>
 

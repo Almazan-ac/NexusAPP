@@ -83,6 +83,7 @@ export interface UserProfile {
   unlockedAchievements: string[];
   claimedCoupons: Coupon[];
   votedIngredients: { [ingredientId: string]: number }; // ingredientId: votes_allocated
+  role?: string;
 }
 
 export interface RestaurantOrder {
@@ -95,4 +96,42 @@ export interface RestaurantOrder {
   status: 'pending' | 'completed' | 'cancelled';
   createdAt: string;
 }
+
+export type AppUserRole = 'consumer' | 'retailer' | 'developer';
+
+export interface RestaurantPage {
+  id: string;
+  name: string;
+  category: string;
+  slogan: string;
+  description: string;
+  bannerUrl: string;
+  ownerId: string;
+  ownerName: string;
+  ownerAge?: number;
+  studiedMarketing?: boolean;
+  status: 'draft' | 'published';
+  createdAt: string;
+}
+
+export interface RestaurantReview {
+  id: string;
+  restaurantId: string;
+  username: string;
+  userRole: AppUserRole;
+  rating: number; // 1-5
+  opinion: string;
+  targetType: 'business' | 'webpage'; // Critique the business idea or the webpage's style/layout
+  createdAt: string;
+}
+
+export interface DeveloperMessage {
+  id: string;
+  restaurantId: string; // Linking the chat to the specific restaurant project
+  sender: 'owner' | 'developer';
+  senderName: string;
+  text: string;
+  createdAt: string;
+}
+
 

@@ -8,11 +8,11 @@
   --font-press-start: "Press Start 2P", sans-serif;
   --font-rajdhani: "Rajdhani", sans-serif;
 
-  --color-cyber-cyan: #00f3ff;
-  --color-cyber-magenta: #ff00ff;
-  --color-cyber-green: #39ff14;
-  --color-cyber-yellow: #fff000;
-  --color-cyber-dark: #050505;
+  --color-cyber-cyan: #6366f1;
+  --color-cyber-magenta: #ec4899;
+  --color-cyber-green: #10b981;
+  --color-cyber-yellow: #f59e0b;
+  --color-cyber-dark: #090d16;
 }
 
 @keyframes gridMove {
@@ -21,20 +21,20 @@
 }
 
 @keyframes flicker {
-  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; filter: drop-shadow(0 0 8px currentColor); }
-  20%, 24%, 55% { opacity: 0.6; filter: none; }
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.4)); }
+  20%, 24%, 55% { opacity: 0.7; filter: none; }
 }
 
 .animate-flicker {
-  animation: flicker 2.5s infinite;
+  animation: flicker 4s infinite;
 }
 
 .bg-grid-cyber {
   background-image: 
-    linear-gradient(rgba(0, 243, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 243, 255, 0.04) 1px, transparent 1px);
-  background-size: 30px 30px;
-  animation: gridMove 30s linear infinite;
+    linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+  background-size: 35px 35px;
+  animation: gridMove 45s linear infinite;
 }
 
 ::-webkit-scrollbar {
@@ -42,13 +42,13 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #050505;
+  background: #090d16;
 }
 ::-webkit-scrollbar-thumb {
-  background: #00f3ff;
+  background: #6366f1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff00ff;
+  background: #ec4899;
 }
 
