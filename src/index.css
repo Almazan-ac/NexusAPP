@@ -13,6 +13,101 @@
   --color-cyber-green: #10b981;
   --color-cyber-yellow: #f59e0b;
   --color-cyber-dark: #090d16;
+
+  /* Overrides for Cozy Cafe, Beige & Coffee Experience */
+  --color-slate-950: #FAF5EB;
+  --color-slate-900: #FFFDF9;
+  --color-slate-850: #E6DDD0;
+  --color-slate-800: #DCD2C1;
+  --color-slate-705: #C8BCAC;
+  --color-slate-700: #C2B6A5;
+  --color-slate-650: #AA9B8A;
+  --color-slate-600: #938473;
+  --color-slate-550: #7E6F5E;
+  --color-slate-500: #706151;
+  --color-slate-450: #625344;
+  --color-slate-400: #554637;
+  --color-slate-350: #493A2D;
+  --color-slate-300: #3E3023;
+  --color-slate-205: #35281C;
+  --color-slate-200: #302318;
+  --color-slate-100: #22150C;
+  --color-slate-50: #180C05;
+
+  /* Overrides for neutral palette to align with the beige/coffee theme */
+  --color-neutral-950: #FAF5EB;
+  --color-neutral-900: #FFFDF9;
+  --color-neutral-850: #E6DDD0;
+  --color-neutral-800: #DCD2C1;
+  --color-neutral-750: #C8BCAC;
+  --color-neutral-700: #C2B6A5;
+  --color-neutral-650: #AA9B8A;
+  --color-neutral-600: #938473;
+  --color-neutral-550: #7E6F5E;
+  --color-neutral-500: #706151;
+  --color-neutral-450: #625344;
+  --color-neutral-400: #554637;
+  --color-neutral-350: #493A2D;
+  --color-neutral-300: #3E3023;
+  --color-neutral-250: #35281C;
+  --color-neutral-200: #302318;
+  --color-neutral-100: #22150C;
+  --color-neutral-50: #180C05;
+
+  --color-indigo-950: #442a18;
+  --color-indigo-900: #53351f;
+  --color-indigo-800: #714b30;
+  --color-indigo-700: #855b3c;
+  --color-indigo-650: #936545;
+  --color-indigo-600: #9E6F4D;
+  --color-indigo-500: #AB7C5B;
+  --color-indigo-400: #BB8F71;
+  --color-indigo-300: #CDA78D;
+  --color-indigo-200: #DFC2AE;
+  --color-indigo-100: #EEDECE;
+  --color-indigo-50: #FAF3EC;
+}
+
+/* Custom typography and accessibility overrides for Cozy Coffee/Beige Theme */
+.text-white {
+  color: #1E1108 !important;
+}
+
+svg.text-white, svg .text-white {
+  stroke: #1E1108 !important;
+}
+
+/* Make sure active buttons or CTA blocks with dark brown backgrounds maintain perfect creamy/white text */
+.bg-indigo-600,
+.bg-indigo-650,
+.bg-indigo-700,
+.bg-indigo-800,
+.bg-indigo-900,
+.bg-indigo-950,
+button.bg-indigo-600,
+button.bg-indigo-650,
+button.bg-indigo-700,
+button.bg-indigo-900,
+button.bg-indigo-950 {
+  color: #FAF5EB !important;
+}
+
+/* Text elements inside solid brown/dark buttons should stay creamy/white for contrast */
+.bg-indigo-600 .text-white,
+.bg-indigo-650 .text-white,
+.bg-indigo-700 .text-white,
+.bg-indigo-800 .text-white,
+.bg-indigo-900 .text-white,
+.bg-indigo-950 .text-white {
+  color: #FAF5EB !important;
+}
+
+/* Form and database input fields readability */
+input, select, textarea {
+  color: #1E1108 !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #7E6F5E !important;
 }
 
 @keyframes gridMove {

@@ -472,7 +472,12 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
     };
 
     try {
-      await addDoc(collection(db, 'orders'), newOrder);
+      const isPublic = selectedRest.status === 'published';
+      if (isPublic) {
+        await addDoc(collection(db, 'orders'), newOrder);
+      } else {
+        console.log("Simulación de venta: el restaurante está en borrador. No se guardará en Firestore.");
+      }
       
       // Build printed coupon/ticket receipt
       setOrderReceipt({
@@ -480,8 +485,10 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
         product: product,
         notes: purchaseNotes.trim() || 'Sin notas especiales',
         payment: paymentOption === 'mkt_card' ? 'Tarjeta Estudiante MKT 💳' : paymentOption === 'coppel_qr' ? 'QR Coppel Estudis 📲' : 'Moneda Escolar 🪙',
-        date: new Date().toLocaleTimeString(),
-        deliveryEst: '12-18 minutos (Entrega bento en campus)'
+        date: isPublic ? new Date().toLocaleTimeString() : `${new Date().toLocaleTimeString()} (SIMULADO)`,
+        deliveryEst: isPublic 
+          ? '12-18 minutos (Entrega bento en campus)' 
+          : '🍔 MODO SIMULACIÓN: No se guardó debido a estado BORRADOR'
       });
       setSelectedProduct(null);
       setPurchaseNotes('');
