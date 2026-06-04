@@ -472,12 +472,7 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
     };
 
     try {
-      const isPublic = selectedRest.status === 'published';
-      if (isPublic) {
-        await addDoc(collection(db, 'orders'), newOrder);
-      } else {
-        console.log("Simulación de venta: el restaurante está en borrador. No se guardará en Firestore.");
-      }
+      await addDoc(collection(db, 'orders'), newOrder);
       
       // Build printed coupon/ticket receipt
       setOrderReceipt({
@@ -485,10 +480,10 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
         product: product,
         notes: purchaseNotes.trim() || 'Sin notas especiales',
         payment: paymentOption === 'mkt_card' ? 'Tarjeta Estudiante MKT 💳' : paymentOption === 'coppel_qr' ? 'QR Coppel Estudis 📲' : 'Moneda Escolar 🪙',
-        date: isPublic ? new Date().toLocaleTimeString() : `${new Date().toLocaleTimeString()} (SIMULADO)`,
-        deliveryEst: isPublic 
+        date: new Date().toLocaleTimeString(),
+        deliveryEst: selectedRest.status === 'published' 
           ? '12-18 minutos (Entrega bento en campus)' 
-          : '🍔 MODO SIMULACIÓN: No se guardó debido a estado BORRADOR'
+          : '12-18 minutos (Borrador Guardado en Base de Datos)'
       });
       setSelectedProduct(null);
       setPurchaseNotes('');
@@ -528,9 +523,9 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
 
   // Merge Firestore restaurants and Mock database for classmate engagement
   const getAllPublishedRestaurants = (): RestaurantPage[] => {
-    // We only put the custom created restaurants here. Nexus goes in its own highlighted spotlight!
-    const publishedDb = restaurants.filter(r => r.status === 'published' && r.id !== NEXUS_PROJECT.id);
-    return [...publishedDb, ...MOCK_CLASSMATE_RESTAURANTS];
+    // Include both published and draft restaurants so students can order and test their draft/published versions alike.
+    const customDb = restaurants.filter(r => r.id !== NEXUS_PROJECT.id);
+    return [...customDb, ...MOCK_CLASSMATE_RESTAURANTS];
   };
 
   const classmateListings = getAllPublishedRestaurants();
@@ -676,7 +671,9 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
     : '5.0';
 
   if (isInsidePage && selectedRest) {
-    const products = getProductsForCategory(selectedRest.category);
+    const products = (selectedRest.menu && selectedRest.menu.length > 0)
+      ? selectedRest.menu
+      : getProductsForCategory(selectedRest.category);
     const currentTheme = getThemeForCategory(selectedRest.category, selectedRest.name);
 
     return (
@@ -715,9 +712,16 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent"></div>
           
           <div className="relative z-10 space-y-2.5 max-w-3xl">
-            <span className={`text-[10px] font-mono font-black px-3 py-1 rounded-full uppercase tracking-widest ${currentTheme.badgeStyle}`}>
-              {selectedRest.category}
-            </span>
+            <div className="flex gap-2">
+              <span className={`text-[10px] font-mono font-black px-3 py-1 rounded-full uppercase tracking-widest ${currentTheme.badgeStyle}`}>
+                {selectedRest.category}
+              </span>
+              {selectedRest.status === 'draft' && (
+                <span className="text-[10px] font-mono font-black px-3 py-1 rounded-full uppercase tracking-widest bg-amber-950/80 text-amber-400 border border-amber-850/60 font-black">
+                  Borrador 📝
+                </span>
+              )}
+            </div>
             <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight uppercase leading-none text-white drop-shadow-md">
               <span className={currentTheme.fontTitle}>{selectedRest.name}</span>
               <span className="text-2xl">{currentTheme.decoratedTitleSuffix}</span>
@@ -835,37 +839,72 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
                   {currentTheme.themeWidget}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {products.map((p) => (
-                    <div key={p.id} className="bg-slate-900/60 p-4 rounded-xl border border-slate-850 hover:border-slate-700 hover:bg-slate-900/90 transition-all flex flex-col justify-between space-y-3 shadow-md hover:shadow-lg">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-start gap-1">
-                          <span className="text-3xl bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">{p.icon}</span>
-                          <span className={`text-[11px] font-mono font-extrabold ${currentTheme.accentText}`}>${p.price} MXN</span>
-                        </div>
-                        <div>
-                          <h4 className="text-white font-bold text-xs uppercase tracking-tight">{p.name}</h4>
-                          <p className="text-[11px] text-slate-405 leading-normal mt-1 block">
-                            {p.description}
-                          </p>
-                        </div>
+                {selectedRest.suspended ? (
+                  <div className="bg-red-950/20 border border-red-900/40 p-8 rounded-3xl space-y-6 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-red-950/65 rounded-full border border-red-800 text-red-500 shadow-xl">
+                        <span className="text-4xl text-red-500 font-sans">🚫</span>
                       </div>
+                      <strong className="text-lg text-white font-sans uppercase tracking-wider">
+                        SITIO SUSPENDIDO PREVENTIVAMENTE
+                      </strong>
+                      <span className="text-[10px] font-mono text-red-400 bg-red-950/70 border border-red-900 px-3 py-1 rounded-full uppercase tracking-widest font-black">
+                        COEPRIS CD. VICTORIA, TAMAULIPAS
+                      </span>
+                    </div>
 
-                      <div className="pt-2.5 border-t border-slate-900/90 flex items-center justify-between">
-                        <span className="text-[9px] font-mono text-emerald-400 font-bold">+15 XP de Apoyo</span>
-                        <button
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setOrderReceipt(null);
-                          }}
-                          className={`px-4 py-1.5 hover:scale-105 active:scale-95 text-white font-sans font-bold text-[10px] tracking-wider uppercase rounded-xl transition-all cursor-pointer shadow-md ${currentTheme.accentColor} ${currentTheme.accentHover}`}
-                        >
-                          Comprar 🛒
-                        </button>
+                    <p className="text-xs text-slate-350 leading-relaxed max-w-lg mx-auto font-sans">
+                      Este escaparate digital gastronómico de <strong>{selectedRest.name}</strong> ha sido suspendido de las operaciones comerciales de la plataforma de forma temporal por disposición municipal regulatoria.
+                    </p>
+
+                    <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-850/60 max-w-md mx-auto text-left space-y-2 text-[11px] font-mono leading-relaxed">
+                      <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wide font-mono">Causa del Acta Excedida:</span>
+                      <p className="text-red-350">
+                        "{selectedRest.suspensionReason || 'Falta de folios o acreditaciones sanitarias COEPRIS debidas dentro del plazo establecido.'}"
+                      </p>
+                      <div className="pt-2 border-t border-slate-900 text-[10px] text-slate-500 flex justify-between font-mono">
+                        <span>Acreditación: Pendiente</span>
+                        <span>Sanción: Desactivación</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    <p className="text-[10px] text-slate-500 pl-2 pr-2 font-sans">
+                      💡 El dueño de la marca ({selectedRest.ownerName}) debe ingresar al panel del portal de emprendedores para registrar sus permisos reales de Cd. Victoria con folios válidos y así rehabilitar de inmediato el sitio web culinario.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {products.map((p) => (
+                      <div key={p.id} className="bg-slate-900/60 p-4 rounded-xl border border-slate-850 hover:border-slate-700 hover:bg-slate-900/90 transition-all flex flex-col justify-between space-y-3 shadow-md hover:shadow-lg">
+                        <div className="space-y-2 text-left">
+                          <div className="flex justify-between items-start gap-1">
+                            <span className="text-3xl bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">{p.icon}</span>
+                            <span className={`text-[11px] font-mono font-extrabold ${currentTheme.accentText}`}>${p.price} MXN</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-xs uppercase tracking-tight">{p.name}</h4>
+                            <p className="text-[11px] text-slate-405 leading-normal mt-1 block">
+                              {p.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="pt-2.5 border-t border-slate-900/90 flex items-center justify-between">
+                          <span className="text-[9px] font-mono text-emerald-400 font-bold">+15 XP de Apoyo</span>
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setOrderReceipt(null);
+                            }}
+                            className={`px-4 py-1.5 hover:scale-105 active:scale-95 text-white font-sans font-bold text-[10px] tracking-wider uppercase rounded-xl transition-all cursor-pointer shadow-md ${currentTheme.accentColor} ${currentTheme.accentHover}`}
+                          >
+                            Comprar 🛒
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Incubator Outline details footer */}
                 <div className="p-4 bg-slate-900/60 border border-slate-850 rounded-xl space-y-2 text-xs leading-relaxed">
@@ -1194,10 +1233,20 @@ export default function RestaurantPortal({ userRole, username, onExploreNexus, o
                   <img src={item.bannerUrl} alt={item.name} referrerPolicy="no-referrer" className="w-full h-full object-cover opacity-40" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent"></div>
                   
-                  <div className="absolute top-3 left-4">
+                  <div className="absolute top-3 left-4 flex gap-2">
                     <span className="font-mono text-[9px] bg-slate-900/90 font-bold border border-slate-800 px-2 py-0.5 rounded text-slate-300 tracking-wider uppercase">
                       {item.category}
                     </span>
+                    {item.status === 'draft' && (
+                      <span className="font-mono text-[9px] bg-amber-955/95 font-bold border border-amber-800 px-2 py-0.5 rounded text-amber-400 tracking-wider uppercase">
+                        Borrador 📝
+                      </span>
+                    )}
+                    {item.suspended && (
+                      <span className="font-mono text-[9px] bg-red-950/95 font-bold border border-red-800 px-2 py-0.5 rounded text-red-400 tracking-wider uppercase animate-pulse">
+                        Suspendido 🚫
+                      </span>
+                    )}
                   </div>
                 </div>
 

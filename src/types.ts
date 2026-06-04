@@ -99,6 +99,14 @@ export interface RestaurantOrder {
 
 export type AppUserRole = 'consumer' | 'retailer' | 'developer';
 
+export interface StoreProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  icon: string;
+}
+
 export interface RestaurantPage {
   id: string;
   name: string;
@@ -112,6 +120,14 @@ export interface RestaurantPage {
   studiedMarketing?: boolean;
   status: 'draft' | 'published';
   createdAt: string;
+  menu?: StoreProduct[];
+  completedPermitTasks?: Record<string, boolean>;
+  completedMktTasks?: Record<string, boolean>;
+  permitFolios?: Record<string, string>;
+  permitDates?: Record<string, string>;
+  permitDeadline?: string;
+  suspended?: boolean;
+  suspensionReason?: string;
 }
 
 export interface RestaurantReview {

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, doc, setDoc, onSnapshot, query, where, getDoc } from 'firebase/firestore';
-import { RestaurantPage, RestaurantReview } from '../types';
-import { Store, Palette, MessageSquare, Laptop, Check, AlertCircle, Sparkles, Star, Globe, Megaphone, ArrowLeft, ArrowRight, Share2, HelpCircle, Home, TrendingUp, FileText, CheckSquare } from 'lucide-react';
+import { RestaurantPage, RestaurantReview, StoreProduct } from '../types';
+import { Store, Palette, MessageSquare, Laptop, Check, AlertCircle, Sparkles, Star, Globe, Megaphone, ArrowLeft, ArrowRight, Share2, HelpCircle, Home, TrendingUp, FileText, CheckSquare, UtensilsCrossed } from 'lucide-react';
 
 interface RestaurantCreatorProps {
   ownerId: string;
@@ -20,12 +20,19 @@ const PRESET_BANNERS = [
 ];
 
 export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studiedMarketing }: RestaurantCreatorProps) {
-  const [activeTab, setActiveTab] = useState<'hub' | 'edit' | 'audit' | 'menu-planner' | 'mkt-planner' | 'permits' | 'preview'>('hub');
+  const [activeTab, setActiveTab] = useState<'hub' | 'edit' | 'menu' | 'audit' | 'menu-planner' | 'mkt-planner' | 'permits' | 'preview'>('hub');
   
   // Real-time states
   const [restaurant, setRestaurant] = useState<RestaurantPage | null>(null);
   const [reviews, setReviews] = useState<RestaurantReview[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Custom Menu States
+  const [menuList, setMenuList] = useState<StoreProduct[]>([]);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemDesc, setNewItemDesc] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('100');
+  const [newItemIcon, setNewItemIcon] = useState('🍔');
 
   // Form & Wizard states
   const [wizardStep, setWizardStep] = useState<number | null>(null);
@@ -65,6 +72,26 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
     'p3': false,
     'p4': false,
   });
+
+  const [permitFolios, setPermitFolios] = useState<Record<string, string>>({
+    'p1': '',
+    'p2': '',
+    'p3': '',
+    'p4': '',
+  });
+
+  const [permitDates, setPermitDates] = useState<Record<string, string>>({
+    'p1': '',
+    'p2': '',
+    'p3': '',
+    'p4': '',
+  });
+
+  const [permitDeadline, setPermitDeadline] = useState<string>('');
+
+  const [selectedPermitForForm, setSelectedPermitForForm] = useState<string | null>(null);
+  const [inputFolio, setInputFolio] = useState('');
+  const [inputDate, setInputDate] = useState('');
 
   const handleGenerateDish = () => {
     if (!selectedBase || !selectedAddon) return;
@@ -108,6 +135,164 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
     setPlannerDishStory(dishStory);
   };
 
+  const getCategoryPresets = (ownerCat: string): StoreProduct[] => {
+    const normalized = (ownerCat || '').toLowerCase();
+    
+    if (normalized.includes('ramen') || normalized.includes('asia') || normalized.includes('sushi') || normalized.includes('oriental') || normalized.includes('fusión') || normalized.includes('fusion')) {
+      return [
+        { id: 'preset_ram_1', name: 'Cyberpunk Ramen Shoyu 🍜', description: 'Fideos artesanales bento servidos en caldo concentrated de cerdo shoyu de 12 horas, huevo ajitama macerado, chashu y nori grabado con láser.', price: 135, icon: '🍜' },
+        { id: 'preset_ram_2', name: 'Glow Boba Matcha 🧋', description: 'Té de matcha orgánico espumoso con perlas de tapioca fluorescentes, ideal para alumbrar tus aventuras nocturnas.', price: 65, icon: '🧋' },
+        { id: 'preset_ram_3', name: 'Molecular Gyoza Box 🥟', description: 'Empaque bento con 5 gyozas crujientes rellenas de cerdo con esferificaciones de salsa ponzu cítrica que explotan en boca.', price: 95, icon: '🥟' },
+        { id: 'preset_ram_4', name: 'Sashimi Wave Bento 🍣', description: 'Cortes seleccionados de salmón fresco sobre cama de arroz con sésamo negro de Tamaulipas y aderezo wasabi-soya.', price: 155, icon: '🍣' }
+      ];
+    }
+    
+    if (normalized.includes('burger') || normalized.includes('hamburguesa') || normalized.includes('alitas') || normalized.includes('cervecería') || normalized.includes('cerveceria') || normalized.includes('snack')) {
+      return [
+        { id: 'preset_burg_1', name: 'Eco-Bento Double Burger 🍔', description: 'Dos carnes angus de 120g aplastadas con queso cheddar real, pepinillos y aderezo ahumado bento servida en empaque biodegradable.', price: 165, icon: '🍔' },
+        { id: 'preset_burg_2', name: 'Upstacked Crispy Wings 🍗', description: 'Alitas premium fritas bañadas en aderezo de mango habanero o chipotle dulce artesanal en caja bento organizada.', price: 110, icon: '🍗' },
+        { id: 'preset_burg_3', name: 'Bento Waffle Fries 🍟', description: 'Papas cortadas en rejilla sazonadas con paprika y sal de mar de la costa, servidas con dip cremoso de chile piquín.', price: 55, icon: '🍟' },
+        { id: 'preset_burg_4', name: 'Choco Smores Bento Pack 🧁', description: 'Tres sándwiches de galleta graham con malvaviscos asados a la leña y chocolate regional de Tamaulipas.', price: 75, icon: '🧁' }
+      ];
+    }
+    
+    if (normalized.includes('pizza') || normalized.includes('pizzería') || normalized.includes('pizzeria') || normalized.includes('italiana')) {
+      return [
+        { id: 'preset_piz_1', name: 'Bento Pizza Personal Margarita 🍕', description: 'Monoporción horneada a la piedra con mozzarella de hebra tamaulipeco, salsa pomodoro italiana de la casa y albahaca fresca del huerto.', price: 125, icon: '🍕' },
+        { id: 'preset_piz_2', name: 'Pizza Carbonara Norteña 🍕', description: 'Salsa blanca ahumada artesanal, trozos crujientes de tocino regional y costra de queso asadero sobre masa horneada.', price: 145, icon: '🍕' },
+        { id: 'preset_piz_3', name: 'Bastones de Ajo & Hierbas 🥖', description: 'Palitroques de masa madre con mantequilla de ajo asado, finas hierbas y dipping de salsa marinara.', price: 65, icon: '🥖' },
+        { id: 'preset_piz_4', name: 'Soda San Pellegrino de Tuna 🥤', description: 'Refrescante combinación de agua carbonatada con jarabe concentrado de tuna silvestre elaborado en la región.', price: 50, icon: '🥤' }
+      ];
+    }
+    
+    // Fallback/Default for Taquería, Gastro-Bar, Café, and General
+    return [
+      { id: 'preset_gen_1', name: 'Taco Costra Ribeye 🌮', description: 'Delicioso corte premium montado sobre una crujiente costra de queso de hebra tamaulipeco artesanal y tortillas recién hechas.', price: 95, icon: '🌮' },
+      { id: 'preset_gen_2', name: 'Mezcalita de Jamaica 🍹', description: 'Bebida premium refrescante con reducción de flor de jamaica salvaje infusionada con mezcal de la casa y sal de gusano.', price: 80, icon: '🍹' },
+      { id: 'preset_gen_3', name: 'Porchetta Slider Express 🍔', description: 'Pan bento suave relleno de fina porchetta artesanal ahumada al mezquite con aderezo chipotle de rancho.', price: 110, icon: '🍔' },
+      { id: 'preset_gen_4', name: 'Cerveza Victoria Artesanal 🍺', description: 'Cerveza bien fría acompañada de pulpa de tamarindo picante bento y limón regional para elevar la experiencia.', price: 60, icon: '🍺' }
+    ];
+  };
+
+  const handleAutoLoadPresets = async () => {
+    const presets = getCategoryPresets(category);
+    const updatedMenu = [...menuList];
+    
+    presets.forEach(p => {
+      if (!updatedMenu.some(m => m.name.toLowerCase() === p.name.toLowerCase())) {
+        updatedMenu.push(p);
+      }
+    });
+    
+    setMenuList(updatedMenu);
+    
+    const rId = `rest_${ownerId}`;
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'restaurants', rId), {
+        id: rId,
+        name: name.trim() || 'Restaurante sin Nombre',
+        category: category,
+        slogan: slogan.trim() || 'Alta innovación culinaria',
+        description: description.trim() || 'Sin descripción detallada.',
+        bannerUrl: customBannerUrl.trim() || bannerUrl,
+        ownerId: ownerId || 'unknown_owner',
+        ownerName: ownerName || 'COLEGA',
+        status: status || 'draft',
+        createdAt: restaurant ? restaurant.createdAt : new Date().toISOString(),
+        menu: updatedMenu
+      }, { merge: true });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setSaveError("Error al guardar presets en el menú: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddCustomProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newItemName.trim() || !newItemPrice) return;
+    
+    const priceNum = parseFloat(newItemPrice);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      alert("⚠️ Por favor ingresa un precio numérico válido mayor a 0.");
+      return;
+    }
+    
+    const newProduct: StoreProduct = {
+      id: 'prod_' + Date.now(),
+      name: `${newItemName.trim()} ${newItemIcon}`,
+      description: newItemDesc.trim() || 'Platillo preparado con ingredientes selectos y de alta gama regional.',
+      price: priceNum,
+      icon: newItemIcon
+    };
+    
+    const updatedMenu = [...menuList, newProduct];
+    setMenuList(updatedMenu);
+    
+    setNewItemName('');
+    setNewItemDesc('');
+    setNewItemPrice('100');
+    
+    const rId = `rest_${ownerId}`;
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'restaurants', rId), {
+        id: rId,
+        name: name.trim() || 'Restaurante sin Nombre',
+        category: category,
+        slogan: slogan.trim() || 'Alta innovación culinaria',
+        description: description.trim() || 'Sin descripción detallada.',
+        bannerUrl: customBannerUrl.trim() || bannerUrl,
+        ownerId: ownerId || 'unknown_owner',
+        ownerName: ownerName || 'COLEGA',
+        status: status || 'draft',
+        createdAt: restaurant ? restaurant.createdAt : new Date().toISOString(),
+        menu: updatedMenu
+      }, { merge: true });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setSaveError("Error al agregar platillo al menú: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    const updatedMenu = menuList.filter(p => p.id !== productId);
+    setMenuList(updatedMenu);
+    
+    const rId = `rest_${ownerId}`;
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'restaurants', rId), {
+        id: rId,
+        name: name.trim() || 'Restaurante sin Nombre',
+        category: category,
+        slogan: slogan.trim() || 'Alta innovación culinaria',
+        description: description.trim() || 'Sin descripción detallada.',
+        bannerUrl: customBannerUrl.trim() || bannerUrl,
+        ownerId: ownerId || 'unknown_owner',
+        ownerName: ownerName || 'COLEGA',
+        status: status || 'draft',
+        createdAt: restaurant ? restaurant.createdAt : new Date().toISOString(),
+        menu: updatedMenu
+      }, { merge: true });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setSaveError("Error al borrar platillo del menú: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Load from Firestore
   useEffect(() => {
     let active = true;
@@ -124,6 +309,21 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
         setSlogan(data.slogan || '');
         setDescription(data.description || '');
         setStatus(data.status || 'draft');
+        setMenuList(data.menu || []);
+        setCompletedPermitTasks(data.completedPermitTasks || { p1: false, p2: false, p3: false, p4: false });
+        setCompletedMktTasks(data.completedMktTasks || { t1: false, t2: false, t3: false, t4: false, t5: false });
+        setPermitFolios(data.permitFolios || { p1: '', p2: '', p3: '', p4: '' });
+        setPermitDates(data.permitDates || { p1: '', p2: '', p3: '', p4: '' });
+        
+        // If deadline is missing, calculate 5 days from createdAt as default
+        if (data.permitDeadline) {
+          setPermitDeadline(data.permitDeadline);
+        } else {
+          const createdTime = data.createdAt ? new Date(data.createdAt).getTime() : Date.now();
+          const fallbackDeadline = new Date(createdTime + 5 * 24 * 60 * 60 * 1050).toISOString();
+          setPermitDeadline(fallbackDeadline);
+        }
+
         setWizardStep(null); // It exists, so we don't need wizard
 
         const isPreset = PRESET_BANNERS.some(b => b.url === data.bannerUrl);
@@ -171,6 +371,14 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
     const targetBanner = customBannerUrl.trim() || bannerUrl;
     const rId = `rest_${ownerId}`;
 
+    const finalCreatedAt = restaurant ? restaurant.createdAt : new Date().toISOString();
+    
+    // Calculate if the 5-day permit deadline has passed and any permits are incomplete
+    const finalDeadline = permitDeadline || new Date(new Date(finalCreatedAt).getTime() + 5 * 24 * 60 * 60 * 1000).toISOString();
+    const isDeadlinePassed = new Date() > new Date(finalDeadline);
+    const hasIncompletePermits = Object.values(completedPermitTasks).some(val => !val);
+    const isSuspended = isDeadlinePassed && hasIncompletePermits;
+
     const newPage: RestaurantPage = {
       id: rId,
       name: name.trim() || 'Restaurante sin Nombre',
@@ -181,7 +389,15 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
       ownerId: ownerId || 'unknown_owner',
       ownerName: ownerName || 'COLEGA',
       status: status || 'draft',
-      createdAt: restaurant ? restaurant.createdAt : new Date().toISOString()
+      createdAt: finalCreatedAt,
+      menu: menuList,
+      completedPermitTasks,
+      completedMktTasks,
+      permitFolios,
+      permitDates,
+      permitDeadline: finalDeadline,
+      suspended: isSuspended,
+      suspensionReason: isSuspended ? 'Cumplimiento incompleto de trámites regulatorios en el plazo municipal establecido.' : ''
     };
 
     if (ownerAge !== undefined && ownerAge !== null) {
@@ -205,6 +421,83 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
     } catch (err) {
       console.error("Error saving restaurant page:", err);
       setSaveError("Hubo un contratiempo al subir tu página culinaria a Firestore: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRegisterPermit = async (permitId: string, folio: string, date: string) => {
+    if (!folio.trim() || !date.trim()) {
+      alert("⚠️ Ambos campos (Número de Folio y Fecha del Dictamen) son requeridos para la fiscalización oficial de Cd. Victoria.");
+      return;
+    }
+
+    const updatedPermits = { ...completedPermitTasks, [permitId]: true };
+    const updatedFolios = { ...permitFolios, [permitId]: folio.trim() };
+    const updatedDates = { ...permitDates, [permitId]: date.trim() };
+
+    const rId = `rest_${ownerId}`;
+    
+    // Check if the remaining permits are now complete
+    const hasIncomplete = Object.values(updatedPermits).some(val => !val);
+    const finalDeadline = permitDeadline || new Date(new Date(restaurant?.createdAt || new Date().toISOString()).getTime() + 5 * 24 * 60 * 60 * 1000).toISOString();
+    const isDeadlinePassed = new Date() > new Date(finalDeadline);
+    const isSuspended = isDeadlinePassed && hasIncomplete;
+
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'restaurants', rId), {
+        completedPermitTasks: updatedPermits,
+        permitFolios: updatedFolios,
+        permitDates: updatedDates,
+        suspended: isSuspended,
+        suspensionReason: isSuspended ? 'Cumplimiento incompleto de trámites regulatorios en el plazo municipal establecido.' : ''
+      }, { merge: true });
+
+      setCompletedPermitTasks(updatedPermits);
+      setPermitFolios(updatedFolios);
+      setPermitDates(updatedDates);
+      setSelectedPermitForForm(null);
+      setInputFolio('');
+      setInputDate('');
+    } catch (err) {
+      console.error(err);
+      alert("Error al guardar trámite en Firestore.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleMktTask = async (taskId: string) => {
+    const updatedMkt = { ...completedMktTasks, [taskId]: !completedMktTasks[taskId] };
+    const rId = `rest_${ownerId}`;
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'restaurants', rId), {
+        completedMktTasks: updatedMkt
+      }, { merge: true });
+      setCompletedMktTasks(updatedMkt);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResetPermitDeadline = async () => {
+    const newDeadline = new Date(Date.now() + 5 * 24 * 60 * 60 * 1050).toISOString();
+    const rId = `rest_${ownerId}`;
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'restaurants', rId), {
+        permitDeadline: newDeadline,
+        suspended: false,
+        suspensionReason: ''
+      }, { merge: true });
+      setPermitDeadline(newDeadline);
+      alert("🔄 Se ha otorgado un Plazo de Gracia EXTRA de 5 días para Cd. Victoria. ¡Asegura tus trámites!");
+    } catch (err) {
+      console.error(err);
     } finally {
       setSaving(false);
     }
@@ -884,6 +1177,17 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
             Modificar Datos
           </button>
           <button
+            onClick={() => setActiveTab('menu')}
+            className={`px-4 py-2 rounded-xl text-xs font-sans font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'menu'
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow'
+                : 'bg-slate-900 border-slate-805 text-slate-400 hover:text-white'
+            }`}
+          >
+            <UtensilsCrossed className="w-4 h-4" />
+            Gestionar Menú
+          </button>
+          <button
             onClick={() => setActiveTab('preview')}
             className={`px-4 py-2 rounded-xl text-xs font-sans font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'preview'
@@ -1120,9 +1424,7 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
                     ].map((task) => (
                       <div 
                         key={task.id} 
-                        onClick={() => {
-                          setCompletedMktTasks(prev => ({ ...prev, [task.id]: !prev[task.id] }));
-                        }}
+                        onClick={() => handleToggleMktTask(task.id)}
                         className={`flex items-start gap-2.5 p-2 rounded-lg cursor-pointer transition-all border ${
                           completedMktTasks[task.id] 
                             ? 'bg-indigo-950/20 border-indigo-900/50 text-slate-300' 
@@ -1163,55 +1465,180 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
                 </p>
               </div>
 
-              {/* Option C: Legal Tamaulipas Compliance Guide */}
+              {/* Option C: Legal Tamaulipas Compliance Guide (STRICT & INTERACTIVE) */}
               <div className="bg-slate-950 border border-slate-850 p-5 rounded-2xl space-y-4 shadow-lg flex flex-col justify-between">
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1 rounded bg-indigo-950/50 text-indigo-400 border border-indigo-900"><FileText className="w-4.5 h-4.5" /></span>
-                    <strong className="text-xs text-white font-sans uppercase">CHECKLIST DE TRÁMITES REALES (CD. VICTORIA)</strong>
+                  <div className="flex justify-between items-center bg-slate-900/45 p-2.5 rounded-xl border border-slate-850">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 rounded bg-indigo-950/50 text-indigo-400 border border-indigo-900"><FileText className="w-4.5 h-4.5" /></span>
+                      <strong className="text-xs text-white font-sans uppercase">TRÁMITES REALES (CD. VICTORIA)</strong>
+                    </div>
+                    {restaurant?.suspended && (
+                      <span className="px-2 py-0.5 rounded text-[9px] font-mono font-black bg-red-950 text-red-400 border border-red-805 animate-pulse uppercase">
+                        🚫 SUSPENDIDO
+                      </span>
+                    )}
                   </div>
+
+                  {/* Deadline Grace Period Status Banner */}
+                  <div className="p-3 bg-slate-900/30 rounded-xl space-y-1.5 border border-slate-850 text-left font-sans">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase font-mono block">PLAZO DE GRACIA COEPRIS TAMAULIPAS:</span>
+                    <p className="text-[10px] text-slate-350 leading-normal font-sans">
+                      Tienes hasta el <strong className="text-indigo-400 font-mono text-[11px] font-bold">{permitDeadline ? new Date(permitDeadline).toLocaleDateString() : 'Cargando...'}</strong> para regularizar tus 4 permisos obligatorios de Cd. Victoria.
+                    </p>
+                    
+                    {(() => {
+                      const timeLeft = permitDeadline ? new Date(permitDeadline).getTime() - Date.now() : 0;
+                      const hasIncomplete = Object.values(completedPermitTasks).some(val => !val);
+                      if (timeLeft <= 0 && hasIncomplete) {
+                        return (
+                          <div className="p-2.5 rounded-lg bg-red-950/55 border border-red-900/40 text-[10px] text-red-300 font-mono font-medium space-y-1">
+                            <strong className="block uppercase font-black text-[9px] text-red-400">🚨 PERIODO AGOTADO: CLAUSURA PREVENTIVA</strong>
+                            <p className="text-[9.5px] text-slate-400 leading-tight">Tu escaparate digital ha sido suspendido temporalmente de la red comercial local debido a falta de autorizaciones debidas.</p>
+                            <button
+                              type="button"
+                              onClick={handleResetPermitDeadline}
+                              className="w-full mt-2 py-1 bg-red-900/50 hover:bg-red-800 border border-red-700/50 text-white rounded text-[9px] font-mono uppercase font-black tracking-wider transition-all cursor-pointer"
+                            >
+                              🔄 Solicitar Prórroga Municipal (5 Días)
+                            </button>
+                          </div>
+                        );
+                      } else if (timeLeft <= 0) {
+                        return (
+                          <div className="text-[10px] text-emerald-450 font-mono font-bold flex items-center gap-1.5">
+                            <span>✅ ESTADO DE CUMPLIMIENTO: 100% EN REGLA</span>
+                          </div>
+                        );
+                      } else {
+                        const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
+                        const daysLeft = Math.floor(hoursLeft / 24);
+                        return (
+                          <div className="flex justify-between items-center text-[10px] text-indigo-455 font-mono font-bold pt-1 border-t border-slate-900">
+                            <span>⏳ TIEMPO RESTANTE:</span>
+                            <span className="animate-pulse text-amber-500">{daysLeft > 0 ? `${daysLeft}d y ` : ''}{hoursLeft % 24}h restantes</span>
+                          </div>
+                        );
+                      }
+                    })()}
+                  </div>
+
                   <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
-                    Tener los permisos en regla previene clausuras de COEPRIS y proyecta excelencia. Asegura tu cumplimiento local:
+                    Haz clic en cada trámite municipal obligatorio para registrar el <strong>acta de folio</strong> de inspección física correspondiente:
                   </p>
 
                   <div className="space-y-2 pt-1 font-sans">
                     {[
-                      { id: 'p1', title: 'Registro COEPRIS Victoria', desc: 'Trámite oficial de control contra riesgos sanitarios e higiene en cocina.' },
-                      { id: 'p2', title: 'Aviso de Apertura SAT', desc: 'Inscripción fiscal bajo el régimen de incorporación de alimentos.' },
-                      { id: 'p3', title: 'Licencia Municipal de Funcionamiento', desc: 'Autorización de uso de suelo comercial expedida por el Ayuntamiento.' },
-                      { id: 'p4', title: 'Registro de Marca IMPI', desc: 'Seguridad legal del nombre de tu marca para evitar cobias.' }
-                    ].map((step) => (
-                      <div 
-                        key={step.id}
-                        onClick={() => {
-                          setCompletedPermitTasks(prev => ({ ...prev, [step.id]: !prev[step.id] }));
-                        }}
-                        className={`p-2 rounded-lg border cursor-pointer transition-all ${
-                          completedPermitTasks[step.id]
-                            ? 'bg-emerald-950/20 border-emerald-900/50 text-slate-350'
-                            : 'bg-slate-900/40 border-transparent hover:border-slate-800 text-slate-455'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
-                            completedPermitTasks[step.id]
-                              ? 'bg-emerald-600 border-emerald-600 text-white'
-                              : 'border-slate-700'
-                          }`}>
-                            {completedPermitTasks[step.id] && <Check className="w-2.5 h-2.5 stroke-[3px]" />}
+                      { id: 'p1', title: 'Registro COEPRIS Victoria', desc: 'Trámite oficial de control sanitario de higiene alimentaria y cocina.' },
+                      { id: 'p2', title: 'Aviso de Apertura SAT', desc: 'Inscripción fiscal obligatoria bajo el régimen de incorporación de Cd. Victoria.' },
+                      { id: 'p3', title: 'Licencia Municipal de Funcionamiento', desc: 'Dictamen de uso de suelo comercial expedido por el Ayuntamiento local.' },
+                      { id: 'p4', title: 'Registro de Marca IMPI', desc: 'Protección intelectual del nombre comercial culinario para evitar cobias.' }
+                    ].map((step) => {
+                      const isComplete = completedPermitTasks[step.id];
+                      return (
+                        <div key={step.id} className="space-y-1.5">
+                          <div 
+                            onClick={() => {
+                              setSelectedPermitForForm(selectedPermitForForm === step.id ? null : step.id);
+                              setInputFolio(permitFolios[step.id] || '');
+                              setInputDate(permitDates[step.id] || '');
+                            }}
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer text-left ${
+                              isComplete
+                                ? 'bg-emerald-950/20 border-emerald-900/40 text-slate-350 hover:bg-emerald-950/30'
+                                : 'bg-slate-900/45 border-transparent hover:border-slate-800 text-slate-455'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                                  isComplete ? 'bg-emerald-650 border-emerald-600 text-white' : 'border-slate-700'
+                                }`}>
+                                  {isComplete && <Check className="w-2.5 h-2.5 stroke-[3px]" />}
+                                </div>
+                                <strong className={`text-[10px] ${isComplete ? 'text-white' : 'text-slate-300'}`}>
+                                  {step.title}
+                                </strong>
+                              </div>
+                              <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-black uppercase ${
+                                isComplete ? 'bg-emerald-950 text-emerald-400 border border-emerald-900/50' : 'bg-slate-900 text-amber-500 border border-slate-800'
+                              }`}>
+                                {isComplete ? 'Aprobado 📜' : 'Pendiente 🛑'}
+                              </span>
+                            </div>
+                            
+                            <p className="text-[9px] text-slate-500 pl-6 leading-normal pt-1">{step.desc}</p>
+                            
+                            {isComplete && (
+                              <div className="mt-1.5 pt-1.5 border-t border-emerald-900/30 pl-6 flex justify-between text-[9px] font-mono text-slate-400">
+                                <span>Folio: <strong className="text-emerald-400 font-bold uppercase">{permitFolios[step.id]}</strong></span>
+                                <span>Fecha: <strong className="text-emerald-400 font-bold">{permitDates[step.id]}</strong></span>
+                              </div>
+                            )}
                           </div>
-                          <strong className="text-[10px] text-white block">{step.title}</strong>
+
+                          {/* Inline registration form when selected */}
+                          {selectedPermitForForm === step.id && (
+                            <div className="p-3.5 bg-slate-900/90 border border-indigo-900/60 text-left rounded-xl space-y-3.5 mt-1.5 animate-fadeIn">
+                              <span className="text-[9px] font-mono text-indigo-400 font-black uppercase block tracking-wider">
+                                Formulario de Registro Sanitario / Legal:
+                              </span>
+                              
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-mono text-slate-400 block uppercase font-bold">Número de Acta o Folio Oficial:</label>
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="E.g. REG-COEPRIS-TAM-3829"
+                                  value={inputFolio}
+                                  onChange={(e) => setInputFolio(e.target.value)}
+                                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-100 uppercase font-mono placeholder-slate-700 focus:outline-none focus:border-indigo-500"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-mono text-slate-400 block uppercase font-bold">Fecha de Acreditación / Dictamen:</label>
+                                <input
+                                  type="date"
+                                  required
+                                  value={inputDate}
+                                  onChange={(e) => setInputDate(e.target.value)}
+                                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-mono cursor-pointer focus:outline-none focus:border-indigo-500"
+                                />
+                              </div>
+
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRegisterPermit(step.id, inputFolio, inputDate)}
+                                  className="flex-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-sans font-black uppercase tracking-wide transition-all cursor-pointer text-center"
+                                >
+                                  Validar e Registrar Trámite 📜
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedPermitForForm(null);
+                                    setInputFolio('');
+                                    setInputDate('');
+                                  }}
+                                  className="py-1.5 px-3 bg-slate-950 border border-slate-800 text-slate-400 text-[10px] rounded-lg hover:text-white transition-all cursor-pointer uppercase font-bold"
+                                >
+                                  Cerrar
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <p className="text-[9px] text-slate-500 pl-6 pt-0.5 leading-normal">{step.desc}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-900/85 text-[10px] text-slate-405 flex justify-between items-center bg-slate-900/20 p-2 rounded-xl font-mono">
+                <div className="pt-2 border-t border-slate-900/85 text-[10px] text-slate-405 flex justify-between items-center bg-slate-900/20 p-2.5 rounded-xl font-mono">
                   <span>Trámites Completados:</span>
                   <span className="font-bold text-emerald-400">
-                    {Object.values(completedPermitTasks).filter(Boolean).length} / 4
+                    {Object.values(completedPermitTasks).filter(Boolean).length} / 4 REGISTRADOS
                   </span>
                 </div>
               </div>
@@ -1434,6 +1861,188 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
             </div>
           </div>
 
+        </div>
+      )}
+
+      {activeTab === 'menu' && (
+        <div className="space-y-6 animate-fadeIn text-left">
+          {/* Header intro card */}
+          <div className="p-6 bg-slate-950 border border-slate-850 rounded-2xl shadow-xl space-y-2">
+            <h3 className="font-sans font-black text-white text-base uppercase flex items-center gap-2 font-bold">
+              <UtensilsCrossed className="w-5 h-5 text-indigo-400" />
+              Gestión de Ofertas Gastronómicas (Comidas y Bebidas)
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed font-sans">
+              Establece los contenidos de tu carta de consumo. Puedes autocargar los presets clásicos de tu nicho y después borrarlos u opcionalmente añadir nuevos platillos o tragos custom con su precio y descripción comercial de marketing para Cd. Victoria.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Form Left to Add / Autoload items */}
+            <div className="lg:col-span-5 bg-slate-950 border border-slate-850 p-6 rounded-2xl space-y-6 shadow-xl">
+              
+              {/* Autoload Section */}
+              <div className="space-y-3 pb-4 border-b border-slate-900">
+                <span className="text-[10px] font-mono text-indigo-400 font-bold uppercase block tracking-wider">Carga Rápida Modular</span>
+                <h4 className="text-white font-bold font-sans text-xs uppercase">Menú de Inicio Automatizado</h4>
+                <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+                  ¿Quieres rellenar tu escaparate de inmediato? Autocarga una lista de presets recomendados basados en tu categoría de negocio (<strong className="text-indigo-400 uppercase font-mono">{category}</strong>):
+                </p>
+                
+                <button
+                  type="button"
+                  onClick={handleAutoLoadPresets}
+                  disabled={saving}
+                  className="w-full py-2.5 bg-indigo-950 hover:bg-slate-900 border border-indigo-900/40 text-indigo-200 font-sans font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  ✨ Autocargar Presets de mi Categoría
+                </button>
+              </div>
+
+              {/* Add Custom Item Form */}
+              <form onSubmit={handleAddCustomProduct} className="space-y-4">
+                <span className="text-[10px] font-mono text-indigo-400 font-bold uppercase block tracking-wider font-mono">Editor de Comidas y Bebidas</span>
+                <h4 className="text-white font-bold font-sans text-xs uppercase">Agregar Nuevo Platillo</h4>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-mono text-slate-400 block font-bold uppercase font-mono">Nombre del Alimento o Bebida:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="E.g. Tacos de Pastor con Costra..."
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 uppercase font-mono"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5 align-middle">
+                    <label className="text-[10px] font-mono text-slate-400 block font-bold uppercase font-mono">Precio ($ MXN):</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      placeholder="100"
+                      value={newItemPrice}
+                      onChange={(e) => setNewItemPrice(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-slate-100 font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono text-slate-400 block font-bold uppercase font-mono">Icono Ilustrativo:</label>
+                    <select
+                      value={newItemIcon}
+                      onChange={(e) => setNewItemIcon(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer font-sans"
+                    >
+                      <option value="🍔">🍔 Hamburguesa / Sándwich</option>
+                      <option value="🌮">🌮 Taco / Quesadilla</option>
+                      <option value="🍕">🍕 Pizza / Focaccia</option>
+                      <option value="🍜">🍜 Ramen / Caldos</option>
+                      <option value="🍣">🍣 Sushi / Sashimi</option>
+                      <option value="🥟">🥟 Gyoza / Snacks</option>
+                      <option value="🍗">🍗 Alitas / Pollo</option>
+                      <option value="🍟">🍟 Papas Fritas / Aros</option>
+                      <option value="🥤">🥤 Soda / Refresco</option>
+                      <option value="🧋">🧋 Boba / Té Helado</option>
+                      <option value="☕">☕ Café de Especialidad</option>
+                      <option value="🍺">🍺 Cerveza bien Fría</option>
+                      <option value="🍹">🍹 Cocktail / Trago Dulce</option>
+                      <option value="🍰">🍰 Postre / Rebanada</option>
+                      <option value="🧇">🧇 Waffle / Crepa</option>
+                      <option value="🥑">🥑 Alimento Fitness / Sano</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-mono text-slate-400 block font-bold uppercase font-mono">Descripción Comercial (Storytelling):</label>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="E.g. Doble pechuga marinada 24 horas en adobo rústico tradicional de la sierra, empanizado super ruidoso y servido en caja bento ecológica con aderezo chipotle..."
+                    value={newItemDesc}
+                    onChange={(e) => setNewItemDesc(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-4 py-2 text-xs text-slate-100 placeholder-slate-650 font-sans resize-none"
+                  />
+                </div>
+
+                {saveSuccess && (
+                  <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 text-emerald-400 text-xs rounded-xl flex items-center gap-2 font-mono">
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>¡Menú actualizado y guardado con éxito en Firestore!</span>
+                  </div>
+                )}
+
+                {saveError && (
+                  <p className="text-[10px] font-mono text-red-400 animate-pulse">{saveError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full py-3 bg-indigo-650 hover:bg-indigo-700 text-white font-sans font-bold text-xs tracking-wider uppercase rounded-xl transition-all shadow-md shadow-indigo-950 cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  {saving ? 'Guardando Menú...' : '+ Cargar Alimento al Escaparate'}
+                </button>
+              </form>
+            </div>
+
+            {/* List Right showing interactive menu items list */}
+            <div className="lg:col-span-7 bg-slate-950 border border-slate-850 p-6 rounded-2xl shadow-xl space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-900 pb-3">
+                <span className="text-[10px] font-mono text-slate-400 font-bold uppercase block tracking-wider font-mono">Menú Registrado Actual</span>
+                <span className="text-xs bg-indigo-950 text-indigo-400 font-mono px-2.5 py-0.5 rounded border border-indigo-900 font-mono font-bold">
+                  {menuList.length} Items Registrados
+                </span>
+              </div>
+
+              {menuList.length === 0 ? (
+                <div className="py-20 text-center border-2 border-dashed border-slate-900 rounded-2xl space-y-3">
+                  <span className="text-4xl block opacity-40">🍽️</span>
+                  <div className="space-y-1">
+                    <strong className="text-white text-xs block font-bold font-sans uppercase">Aún no tienes platillos registrados</strong>
+                    <p className="text-[10px] text-slate-500 max-w-sm mx-auto leading-relaxed px-4">
+                      Utiliza el panel izquierdo para cargar presets clásicos del sector o añade tus recetas con fotos o descripciones comerciales.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {menuList.map((item) => (
+                    <div key={item.id} className="p-4 bg-slate-900/50 border border-slate-850 rounded-xl space-y-3 flex flex-col justify-between shadow-lg relative overflow-hidden transition-all hover:border-indigo-900/60">
+                      <div className="space-y-1.5">
+                        <div className="flex items-start justify-between gap-1.5">
+                          <h5 className="text-white text-xs font-bold uppercase leading-tight font-sans line-clamp-1">
+                            {item.name}
+                          </h5>
+                          <span className="text-yellow-450 font-mono text-xs font-bold leading-none shrink-0 font-mono">
+                            ${parseFloat(item.price.toString()).toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 line-clamp-3 leading-normal font-sans">
+                          {item.description}
+                        </p>
+                      </div>
+
+                      <div className="pt-2.5 border-t border-slate-900/70 flex justify-between items-center">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase font-mono">Código: {item.id.substring(0, 8)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProduct(item.id)}
+                          className="px-2 py-1 text-[9px] font-mono bg-red-950/20 hover:bg-red-950/70 border border-red-900/40 text-red-400 rounded-md transition-all cursor-pointer uppercase font-bold"
+                        >
+                          Eliminar 🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1717,21 +2326,16 @@ export default function RestaurantCreator({ ownerId, ownerName, ownerAge, studie
 
                     {/* Product mapping */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {[
-                        { name: 'Combo Bento Signature 🍱', desc: 'Ración bento con proteína signature de la casa, papas fritas rústicas y aderezo especial.', price: 125, icon: '🍱' },
-                        { name: 'Bailout Tonic Fusion 🥤', desc: 'Sabor refrescante cítrico local de Tamaulipas mezclado con pulpa natural silvestre.', price: 45, icon: '🥤' },
-                        { name: 'Cheesecake Bento Cup 🥞', desc: 'Postre gourmet en empaque bento con trozos de galleta artesanal y mermelada.', price: 75, icon: '🥞' },
-                        { name: 'Spicy Smash Burger Box 🍔', desc: 'Doble smash premium con salsa signature y vegetales orgánicos en caja bento.', price: 155, icon: '🍔' }
-                      ].map((p, ix) => (
-                        <div key={ix} className="bg-slate-900/60 p-4 rounded-2xl border border-slate-850 flex flex-col justify-between space-y-4 hover:border-slate-800 transition-all shadow-md">
-                          <div className="space-y-2">
+                      {((menuList && menuList.length > 0) ? menuList : getCategoryPresets(category)).map((p, ix) => (
+                        <div key={p.id || ix} className="bg-slate-900/60 p-4 rounded-2xl border border-slate-850 flex flex-col justify-between space-y-4 hover:border-slate-800 transition-all shadow-md">
+                          <div className="space-y-2 text-left">
                             <div className="flex justify-between items-start">
-                              <span className="text-2xl bg-slate-950 p-1.5 rounded-xl border border-slate-800">{p.icon}</span>
+                              <span className="text-2xl bg-slate-950 p-1.5 rounded-xl border border-slate-800">{p.icon || '🍱'}</span>
                               <span className={`text-xs font-mono font-extrabold ${themeText}`}>${p.price} MXN</span>
                             </div>
                             <div>
                               <strong className="text-white font-black text-xs uppercase block">{p.name}</strong>
-                              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed font-sans">{p.desc}</p>
+                              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed font-sans">{p.description || (p as any).desc || 'Sin descripción.'}</p>
                             </div>
                           </div>
                           
